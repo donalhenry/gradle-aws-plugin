@@ -138,6 +138,7 @@ public class AmazonCloudFormationWaitStackStatusTask extends ConventionTask {
 					
 					// Else if still going, sleep some then loop again
 				} else if (waitStatuses.contains(lastStatus)) {
+					getLogger().info("Status of stack {} is {}...", stackName, lastStatus);
 					Thread.sleep(loopWait * 1000);
 					
 					// Else, it must have failed, so get out of while loop
