@@ -3,7 +3,7 @@ Gradle AWS Plugin
 
 [![Join the chat at https://gitter.im/gradle-aws-plugin/Lobby](https://badges.gitter.im/gradle-aws-plugin/Lobby.svg)](https://gitter.im/gradle-aws-plugin/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-Gradle plugin to manage AWS resouces.
+Gradle plugin to manage AWS resources.
 
 Current Features / Supported AWS Products
 -----------------------------------------
@@ -21,18 +21,20 @@ Current Features / Supported AWS Products
   * Stop instance
   * Terminate instance
   * Import key
+  * Create security group
+  * Delete security group
   * Authorize security group ingress permissions
   * Authorize security group egress permissions
   * Revoke security group ingress permissions
   * Revoke security group egress permissions
-  * Wait instance for specific status
+  * Wait for specific status on instance
 * RDS
   * Create DB instance
   * Delete DB instance
   * Modify DB instance
   * Migrate (create or modify) DB instance
   * Reboot DB instance
-  * Wait DB instance for specific status
+  * Wait for specific status on DB instance
 * Route53
   * Create hosted zone
   * Delete hosted zone
@@ -42,11 +44,11 @@ Current Features / Supported AWS Products
   * Create or terminate environments
   * Create or delete configuration templates
   * Create or delete application versions
-  * Wait environment for specific status
+  * Wait for specific status on environment
 * CloudFormation
   * Migrate (create or update) stack
   * Delete stack
-  * Wait stack for specific status
+  * Wait for specific status on stack
 * Lambda
   * Create function
   * Update function code
@@ -54,6 +56,9 @@ Current Features / Supported AWS Products
   * Migrate (create or update) function
   * Invoke function
   * Delete function
+  * Publish function version
+  * Create alias
+  * Update alias
 * IAM
   * Create role
   * Attach role policy
@@ -65,6 +70,8 @@ Current Features / Supported AWS Products
   * Read messages
 * SNS
   * Publish message
+* SSM
+  * Put parameters
 
 Requirements
 ------------
@@ -72,12 +79,12 @@ Requirements
 * Java 8+
 * Gradle 2.4+
 
-How to use?
------------
+Usage
+-----
 
-Add like this to your build.gradle :
+Add this to your `build.gradle`:
 
-```
+```groovy
 buildscript {
   repositories {
     mavenCentral()
@@ -100,7 +107,7 @@ These credentials are used to make API accesses by default. The format of the cr
 
 ### S3 Create bucket
 
-```
+```groovy
 apply plugin: 'jp.classmethod.aws.s3'
 
 task createBucket(type: CreateBucketTask) {
@@ -113,11 +120,11 @@ task createBucket(type: CreateBucketTask) {
 }
 ```
 
-Look [S3 example 1](samples/01-s3-upload-simple)
+Look at [S3 example 1](samples/01-s3-upload-simple) for more information.
 
 ### S3 files tasks
 
-```
+```groovy
 apply plugin: 'jp.classmethod.aws.s3'
 
 task syncObjects(type: jp.classmethod.aws.gradle.s3.SyncTask) {
@@ -126,12 +133,12 @@ task syncObjects(type: jp.classmethod.aws.gradle.s3.SyncTask) {
 }
 ```
 
-Look [S3 example 1](samples/01-s3-upload-simple) and [S3 example 2](samples/02-s3-sync-contents) for more information.
+Look at [S3 example 1](samples/01-s3-upload-simple) and [S3 example 2](samples/02-s3-sync-contents) for more information.
 
 
 ### EC2 instance tasks
 
-```
+```groovy
 apply plugin: 'jp.classmethod.aws.ec2'
 
 // You can overwrite default credentials and region settings like this:
@@ -149,12 +156,12 @@ task startBastion(type: jp.classmethod.aws.gradle.ec2.AmazonEC2StartInstanceTask
 }
 ```
 
-Look [EC2 example](samples/03-ec2) for more information.
+Look at [EC2 example](samples/03-ec2) for more information.
 
 
 ### RDS DB instance tasks
 
-```
+```groovy
 apply plugin: "jp.classmethod.aws.rds"
 
 // You can overwrite default credentials and region settings like this:
@@ -186,15 +193,15 @@ task deleteDBInstance(type: AmazonRDSDeleteDBInstanceTask) {
 }
 ```
 
-Look [RDS example](samples/07-rds) for more information.
+Look at [RDS example](samples/07-rds) for more information.
 
 
 ### Route 53 hosted zone tasks
 
-```
+```groovy
 apply plugin: 'jp.classmethod.aws.route53'
 
-ask createHostedZone(type: jp.classmethod.aws.gradle.route53.CreateHostedZoneTask) {
+task createHostedZone(type: jp.classmethod.aws.gradle.route53.CreateHostedZoneTask) {
 	hostedZoneName "foobar.example.com"
 	callerReference '0BF44985-9D79-BF3B-A9B0-5AE24D6E86E1'
 }
@@ -204,12 +211,12 @@ task deleteHostedZone(type: jp.classmethod.aws.gradle.route53.DeleteHostedZoneTa
 }
 ```
 
-Look [Route 53 example](samples/04-route53) for more information.
+Look at [Route 53 example](samples/04-route53) for more information.
 
 
-### Elastic Beanstalk environemnt tasks
+### Elastic Beanstalk environment tasks
 
-```
+```groovy
 apply plugin: 'jp.classmethod.aws.beanstalk'
 beanstalk {
   String extension = project.war.archiveName.tokenize('.').last()
@@ -238,7 +245,7 @@ beanstalk {
   
   environment {
     envName = 'foobar'
-    envDesc = 'foobar demo application development environemnt'
+    envDesc = 'foobar demo application development environment'
     templateName = 'development'
     versionLabel = "foobar-${project.war.version}-${timestamp}"
   }
@@ -252,7 +259,7 @@ Look [Elastic Beanstalk example](samples/05-beanstalk) for more information.
 
 ### CloudFormation stack tasks
 
-```
+```groovy
 apply plugin: 'jp.classmethod.aws.cloudformation'
 
 cloudFormation {
@@ -271,15 +278,15 @@ cloudFormation {
   templateKeyPrefix 'foobar/'
 }
 
-// awsCfnMigrateStack and awsCfnDeleteStack task (and so on) is declared.
+// awsCfnMigrateStack and awsCfnDeleteStack task (and so on) are declared.
 ```
 
-Look [CloudFormation example](samples/06-cloudformation) for more information.
+Look at [CloudFormation example](samples/06-cloudformation) for more information.
 
 
 ### Lambda function tasks
 
-```
+```groovy
 apply plugin: "base"
 apply plugin: "jp.classmethod.aws.lambda"
 aws {
@@ -301,6 +308,7 @@ task migrateFunction(type: AWSLambdaMigrateFunctionTask, dependsOn: zip) {
 	role = "arn:aws:iam::${aws.accountId}:role/lambda-poweruser"
 	zipFile = zip.archivePath
 	handler = "DecodeBase64.handler"
+	alias = 'DEV'
 	environment = [
 	    p1: "Value",
 	    p2: "Value2"
@@ -319,13 +327,33 @@ task invokeFunction(type: AWSLambdaInvokeTask) {
 task deleteFunction(type: AWSLambdaDeleteFunctionTask) {
 	functionName = "foobar"
 }
+
+task publishVersionFunction(type: AWSLambdaPublishVersionTask, dependsOn: migrateFunction) {
+	functionName = "foobar"
+}
+
+task createAlias(type: AWSLambdaCreateAliasTask, dependsOn: publishVersionFunction) {
+	functionName = "foobar"
+	aliasName = "alias"
+	functionVersion = "1"
+}
+
+task updateAlias(type: AWSLambdaUpdateAliasTask, dependsOn: createAlias) {
+	functionName = "foobar"
+    aliasName = "alias"
+	functionVersion = "1"
+    routingConfig {
+        additionalVersionWeight = 0.7
+		useNextVersion = true
+    }
+}
 ```
 
-Look [Lambda example](samples/08-lambda) for more information.
+Look at [Lambda example](samples/08-lambda) for more information.
 
 ### SQS tasks
 
-```
+```groovy
 apply plugin: "jp.classmethod.aws.sqs"
 
 task sendMessages(type: AmazonSQSSendMessagesTask) {
@@ -345,10 +373,10 @@ task viewMessages(type: AmazonSQSMessageConsumerTask) {
 }
 ```
 
-Look [SQS example](samples/09-sqs) for more information.
+Look at [SQS example](samples/09-sqs) for more information.
 
 ### SNS tasks
-```
+```groovy
 apply plugin: "jp.classmethod.aws.sns"
 
 task publishMessage(type: AmazonSNSPublishMessageTask) {
@@ -365,17 +393,17 @@ task publishJsonMessage(type: AmazonSNSPublishMessageTask) {
 	messageStructure 'json'
 }
 ```
-Look [SNS example](samples/10-sns) for more information.
+Look at [SNS example](samples/10-sns) for more information.
 
 License
 -------
-Copyright (C) 2013-2015 [Classmethod, Inc.](http://classmethod.jp/)
+Copyright (C) 2013-2018 [Classmethod, Inc.](http://classmethod.jp/)
 
-Distributed under the Apache License v2.0.  See the file copyright/LICENSE.txt.
+Distributed under the Apache License v2.0.  See the file [copyright/LICENSE.txt](copyright/LICENSE.txt).
 
 Development and Contribution
 ----------------------------
-We will open for contributions.
+We are open to contributions.
 
 To contribute to the plugin or make your own modifications, including the ability
-to publish your build artifacts to your own maven repository see: [development](docs/development.md).
+to publish your build artifacts to your own Maven repository see: [development](docs/development.md).
