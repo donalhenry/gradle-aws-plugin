@@ -43,7 +43,7 @@ import com.google.common.io.Files;
 import groovy.lang.Closure;
 
 public class SyncTask extends ConventionTask {
-	
+
 	private static String md5(File file) {
 		try {
 			return Files.hash(file, Hashing.md5()).toString();
@@ -51,51 +51,51 @@ public class SyncTask extends ConventionTask {
 			return "";
 		}
 	}
-	
-	
+
+
 	@Getter
 	@Setter
 	private String bucketName;
-	
+
 	@Getter
 	@Setter
 	private String prefix = "";
-	
+
 	@Getter
 	@Setter
 	private File source;
-	
+
 	@Getter
 	@Setter
 	private boolean delete;
-	
+
 	@Getter
 	@Setter
 	private int threads = 5;
-	
+
 	@Getter
 	@Setter
 	private StorageClass storageClass = StorageClass.Standard;
-	
+
 	@Getter
 	@Setter
 	private Closure<ObjectMetadata> metadataProvider;
-	
+
 	@Getter
 	private CannedAccessControlList acl;
-	
-	
+
+
 	public void setAcl(String aclName) {
 		acl = CannedAccessControlList.valueOf(aclName);
 	}
-	
+
 	@TaskAction
 	public void uploadAction() throws InterruptedException {
 		// to enable conventionMappings feature
 		String bucketName = getBucketName();
 		String prefix = getPrefix();
 		File source = getSource();
-		
+
 		if (bucketName == null) {
 			throw new GradleException("bucketName is not specified");
 		}
@@ -105,47 +105,47 @@ public class SyncTask extends ConventionTask {
 		if (source.isDirectory() == false) {
 			throw new GradleException("source must be directory");
 		}
-		
+
 		prefix = prefix.startsWith("/") ? prefix.substring(1) : prefix;
-		
+
 		AmazonS3PluginExtension ext = getProject().getExtensions().getByType(AmazonS3PluginExtension.class);
 		AmazonS3 s3 = ext.getClient();
-		
+
 		upload(s3, prefix);
 		if (isDelete()) {
 			deleteAbsent(s3, prefix);
 		}
 	}
-	
+
 	private void upload(AmazonS3 s3, String prefix) throws InterruptedException {
 		// to enable conventionMappings feature
 		String bucketName = getBucketName();
 		File source = getSource();
 		Closure<ObjectMetadata> metadataProvider = getMetadataProvider();
 		CannedAccessControlList acl = getAcl();
-		
+
 		ExecutorService es = Executors.newFixedThreadPool(threads);
 		getLogger().info("Start uploading");
 		getLogger().info("Uploading... {} to s3://{}/{}", source, bucketName, prefix);
 		getProject().fileTree(source).visit(new EmptyFileVisitor() {
-			
+
 			public void visitFile(FileVisitDetails element) {
 				es.execute(
 						new UploadTask(s3, element, bucketName, prefix, storageClass, acl, metadataProvider,
 								getLogger()));
 			}
 		});
-		
+
 		es.shutdown();
 		es.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
 		getLogger().info("Finish uploading");
 	}
-	
+
 	private void deleteAbsent(AmazonS3 s3, String prefix) {
 		// to enable conventionMappings feature
 		String bucketName = getBucketName();
 		String pathPrefix = getNormalizedPathPrefix();
-		
+
 		s3.listObjects(bucketName, prefix).getObjectSummaries().forEach(os -> {
 			File f = getProject().file(pathPrefix + os.getKey().substring(prefix.length()));
 			if (f.exists() == false) {
@@ -154,33 +154,33 @@ public class SyncTask extends ConventionTask {
 			}
 		});
 	}
-	
+
 	private String getNormalizedPathPrefix() {
 		String pathPrefix = getSource().toString();
 		pathPrefix += pathPrefix.endsWith("/") ? "" : "/";
 		return pathPrefix;
 	}
-	
-	
+
+
 	private static class UploadTask implements Runnable {
-		
+
 		private AmazonS3 s3;
-		
+
 		private FileVisitDetails element;
-		
+
 		private String bucketName;
-		
+
 		private String prefix;
-		
+
 		private Closure<ObjectMetadata> metadataProvider;
-		
+
 		private StorageClass storageClass;
-		
+
 		private CannedAccessControlList acl;
-		
+
 		private Logger logger;
-		
-		
+
+
 		UploadTask(AmazonS3 s3, FileVisitDetails element, String bucketName, String prefix,
 				StorageClass storageClass, CannedAccessControlList acl, Closure<ObjectMetadata> metadataProvider,
 				Logger logger) {
@@ -193,14 +193,14 @@ public class SyncTask extends ConventionTask {
 			this.metadataProvider = metadataProvider;
 			this.logger = logger;
 		}
-		
+
 		@Override
 		public void run() {
 			// to enable conventionMappings feature
-			
+
 			String relativePath = prefix + element.getRelativePath().toString();
 			String key = relativePath.startsWith("/") ? relativePath.substring(1) : relativePath;
-			
+
 			boolean doUpload = false;
 			try {
 				ObjectMetadata metadata = s3.getObjectMetadata(bucketName, key);
@@ -210,14 +210,14 @@ public class SyncTask extends ConventionTask {
 			} catch (AmazonS3Exception e) {
 				doUpload = true;
 			}
-			
+
 			if (doUpload) {
 				logger.info(" => s3://{}/{}", bucketName, key);
 				s3.putObject(new PutObjectRequest(bucketName, key, element.getFile())
 					.withStorageClass(storageClass)
 					.withCannedAcl(acl)
 					.withMetadata(metadataProvider == null ? null
-							: metadataProvider.call(bucketName, key, element.getFile())));
+							: metadataProvider.call(s3.getObjectMetadata(bucketName, key))));
 			} else {
 				logger.info(" => s3://{}/{} (SKIP)", bucketName, key);
 			}
