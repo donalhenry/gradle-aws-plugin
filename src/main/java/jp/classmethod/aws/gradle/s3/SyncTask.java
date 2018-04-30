@@ -217,7 +217,7 @@ public class SyncTask extends ConventionTask {
 				s3.putObject(new PutObjectRequest(bucketName, key, element.getFile())
 					.withStorageClass(storageClass)
 					.withCannedAcl(acl)
-					// This will apply the metadata closure if a closure has been specified and this is an existing file that is changing
+					// This will apply the metadata closure if a closure has been specified and this is an existing object that is changing with this synch
 					.withMetadata((metadataProvider == null || metadata == null) ? null
 							: metadataProvider.call(metadata)));
 			} else {
