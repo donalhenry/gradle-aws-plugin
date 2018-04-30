@@ -218,8 +218,7 @@ public class SyncTask extends ConventionTask {
 					.withStorageClass(storageClass)
 					.withCannedAcl(acl)
 					// This will apply the metadata closure if a closure has been specified and this is an existing file that is changing
-					.withMetadata((metadataProvider == null || metadata == null)
-							? null
+					.withMetadata((metadataProvider == null || metadata == null) ? null
 							: metadataProvider.call(metadata)));
 			} else {
 				logger.info(" => s3://{}/{} (SKIP)", bucketName, key);
