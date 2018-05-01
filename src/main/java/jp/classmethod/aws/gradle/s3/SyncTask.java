@@ -202,13 +202,14 @@ public class SyncTask extends ConventionTask {
 			String key = relativePath.startsWith("/") ? relativePath.substring(1) : relativePath;
 
 			boolean doUpload = false;
-			ObjectMetadata metadata = null;
+			ObjectMetadata metadata;
 			try {
 				metadata = s3.getObjectMetadata(bucketName, key);
 				if (metadata.getETag().equalsIgnoreCase(md5(element.getFile())) == false) {
 					doUpload = true;
 				}
 			} catch (AmazonS3Exception e) {
+				metadata = new ObjectMetadata();
 				doUpload = true;
 			}
 
@@ -217,9 +218,8 @@ public class SyncTask extends ConventionTask {
 				s3.putObject(new PutObjectRequest(bucketName, key, element.getFile())
 					.withStorageClass(storageClass)
 					.withCannedAcl(acl)
-					// This will apply the metadata closure if a closure has been specified and this is an existing object that is changing with this synch
-					.withMetadata((metadataProvider == null || metadata == null) ? null
-							: metadataProvider.call(metadata)));
+					// So metada closure will be fired if it was specified and the file is new or changing
+					.withMetadata(metadataProvider == null ? null : metadataProvider.call(metadata)));
 			} else {
 				logger.info(" => s3://{}/{} (SKIP)", bucketName, key);
 			}
